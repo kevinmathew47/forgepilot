@@ -1,0 +1,120 @@
+diff --git a/docs/cli.rst b/docs/cli.rst
+index a72e6d51..b4ecf080 100644
+--- a/docs/cli.rst
++++ b/docs/cli.rst
+@@ -146,6 +146,23 @@ context will be active, and the app instance will be imported. ::
+ Use :meth:`~Flask.shell_context_processor` to add other automatic imports.
+ 
+ 
++Show Configuration
++------------------
++
++To print the loaded application's configuration as JSON, use the
++:func:`config <cli.config_command>` command. Any configuration keys containing
++``SECRET``, ``PASSWORD``, ``TOKEN``, or ``KEY`` will have their values masked as
++``"***"``. ::
++
++    $ flask config
++    {
++      "DEBUG": false,
++      "ENV": "production",
++      "SECRET_KEY": "***",
++      ...
++    }
++
++
+ .. _dotenv:
+ 
+ Environment Variables From dotenv
+diff --git a/src/flask/cli.py b/src/flask/cli.py
+index ed11f256..0297118f 100644
+--- a/src/flask/cli.py
++++ b/src/flask/cli.py
+@@ -23,6 +23,7 @@ from werkzeug.utils import import_string
+ from .globals import current_app
+ from .helpers import get_debug_flag
+ from .helpers import get_load_dotenv
++from .json import dumps
+ 
+ if t.TYPE_CHECKING:
+     import ssl
+@@ -594,6 +595,7 @@ class FlaskGroup(AppGroup):
+             self.add_command(run_command)
+             self.add_command(shell_command)
+             self.add_command(routes_command)
++            self.add_command(config_command)
+ 
+         self._loaded_plugin_commands = False
+ 
+@@ -1115,6 +1117,33 @@ def routes_command(sort: str, all_methods: bool) -> None:
+         click.echo(template.format(*row))
+ 
+ 
++@click.command("config", short_help="Show the app config.")
++@with_appcontext
++def config_command() -> None:
++    """Show the app config as JSON, masking secret keys."""
++    def _mask_value(key: str, value: t.Any) -> t.Any:
++        if any(token in key for token in ("SECRET", "PASSWORD", "TOKEN", "KEY")):
++            return "***"
++        if isinstance(value, dict):
++            return {k: _mask_value(str(k), v) for k, v in value.items()}
++        if isinstance(value, list):
++            return [_mask_value(key, v) for v in value]
++        if isinstance(value, tuple):
++            return tuple(_mask_value(key, v) for v in value)
++        return value
++
++    cfg = {}
++    for key in sorted(current_app.config.keys(), key=str):
++        val = current_app.config[key]
++        try:
++            current_app.json.dumps(val)
++        except (TypeError, ValueError):
++            val = str(val)
++        cfg[key] = _mask_value(key, val)
++
++    click.echo(dumps(cfg, indent=2))
++
++
+ cli = FlaskGroup(
+     name="flask",
+     help="""\
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+index e254c1dd..d222f1c0 100644
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -1,6 +1,7 @@
+ # This file was part of Flask-CLI and was modified under the terms of
+ # its Revised BSD License. Copyright © 2015 CERN.
+ import importlib.metadata
++import json
+ import os
+ import platform
+ import ssl
+@@ -518,6 +519,25 @@ class TestRoutes:
+         assert "Host" in result.output
+ 
+ 
++class TestConfig:
++    def test_config(self, runner):
++        app = Flask(__name__)
++        app.config["SECRET_KEY"] = "super-secret"
++        app.config["DB_PASSWORD"] = "secret-pass"
++        app.config["API_TOKEN"] = "token-val"
++        app.config["SOME_KEY"] = "val"
++        app.config["NORMAL"] = "hello"
++        cli = FlaskGroup(create_app=lambda: app)
++        result = runner.invoke(cli, ["config"])
++        assert result.exit_code == 0
++        data = json.loads(result.output)
++        assert data["SECRET_KEY"] == "***"
++        assert data["DB_PASSWORD"] == "***"
++        assert data["API_TOKEN"] == "***"
++        assert data["SOME_KEY"] == "***"
++        assert data["NORMAL"] == "hello"
++
++
+ def dotenv_not_available():
+     try:
+         import dotenv  # noqa: F401
