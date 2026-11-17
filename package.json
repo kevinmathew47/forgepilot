@@ -1,0 +1,225 @@
+{
+  "name": "forgepilot",
+  "displayName": "ForgePilot",
+  "description": "An editor-native coding agent whose agent loop runs on TrueForge.",
+  "version": "0.1.0",
+  "publisher": "forgepilot",
+  "author": "Kevin Mathew",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kevinmathew47/forgepilot.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "forgepilot",
+          "title": "ForgePilot",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "forgepilot": [
+        {
+          "type": "webview",
+          "id": "forgepilot.agent",
+          "name": "Agent"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "forgepilot.inlineEdit",
+        "title": "ForgePilot: Inline Edit Selection"
+      },
+      {
+        "command": "forgepilot.cancel",
+        "title": "ForgePilot: Cancel Running Generation"
+      },
+      {
+        "command": "forgepilot.acceptHunk",
+        "title": "ForgePilot: Accept Hunk"
+      },
+      {
+        "command": "forgepilot.rejectHunk",
+        "title": "ForgePilot: Reject Hunk"
+      },
+      {
+        "command": "forgepilot.acceptAll",
+        "title": "ForgePilot: Accept All Hunks"
+      },
+      {
+        "command": "forgepilot.rejectAll",
+        "title": "ForgePilot: Reject All Hunks"
+      },
+      {
+        "command": "forgepilot.applyReview",
+        "title": "ForgePilot: Apply Reviewed Changes"
+      },
+      {
+        "command": "forgepilot.undoLast",
+        "title": "ForgePilot: Undo Last Applied Change"
+      },
+      {
+        "command": "forgepilot.openSession",
+        "title": "ForgePilot: Open TrueForge Session"
+      },
+      {
+        "command": "forgepilot.selectModel",
+        "title": "ForgePilot: Select Models"
+      },
+      {
+        "command": "forgepilot.reconnect",
+        "title": "ForgePilot: Reconnect to TrueForge"
+      },
+      {
+        "command": "forgepilot.runAgent",
+        "title": "ForgePilot: Run Agent Task"
+      }
+    ],
+    "configurationDefaults": {
+      "diffEditor.codeLens": true
+    },
+    "menus": {
+      "editor/title": [
+        {
+          "command": "forgepilot.acceptAll",
+          "when": "forgepilot.reviewActive && resourceScheme == forgepilot-prop",
+          "group": "navigation@1"
+        },
+        {
+          "command": "forgepilot.rejectAll",
+          "when": "forgepilot.reviewActive && resourceScheme == forgepilot-prop",
+          "group": "navigation@2"
+        },
+        {
+          "command": "forgepilot.applyReview",
+          "when": "forgepilot.reviewActive && resourceScheme == forgepilot-prop",
+          "group": "navigation@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "forgepilot.inlineEdit",
+          "when": "editorHasSelection",
+          "group": "navigation@0"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "forgepilot.acceptHunk",
+        "key": "ctrl+alt+y",
+        "mac": "cmd+alt+y",
+        "when": "forgepilot.reviewActive"
+      },
+      {
+        "command": "forgepilot.rejectHunk",
+        "key": "ctrl+alt+n",
+        "mac": "cmd+alt+n",
+        "when": "forgepilot.reviewActive"
+      },
+      {
+        "command": "forgepilot.inlineEdit",
+        "key": "ctrl+alt+k",
+        "mac": "cmd+alt+k",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "forgepilot.cancel",
+        "key": "ctrl+alt+x",
+        "mac": "cmd+alt+x"
+      },
+      {
+        "command": "forgepilot.applyReview",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "forgepilot.reviewActive"
+      }
+    ],
+    "configuration": {
+      "title": "ForgePilot",
+      "properties": {
+        "forgepilot.trueforgeUrl": {
+          "type": "string",
+          "default": "http://localhost:8790",
+          "description": "Base URL of the local TrueForge server."
+        },
+        "forgepilot.models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Ordered TrueForge model names (provider/model). The first is primary; the rest are automatic fallbacks. Empty means every model configured in TrueForge, in TrueForge's order."
+        },
+        "forgepilot.mcpPort": {
+          "type": "number",
+          "default": 8791,
+          "description": "Port for the editor MCP server that TrueForge connects to."
+        },
+        "forgepilot.contextBudgetTokens": {
+          "type": "number",
+          "default": 6000,
+          "description": "Token budget for automatically retrieved code context."
+        },
+        "forgepilot.retryAttempts": {
+          "type": "number",
+          "default": 2,
+          "description": "Retries with exponential backoff on a model before falling back to the next one."
+        },
+        "forgepilot.allowedCommands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "pytest",
+            "python",
+            "py",
+            "flask",
+            "git status",
+            "git diff",
+            "pip show",
+            "ruff",
+            "mypy"
+          ],
+          "description": "Command prefixes the agent may run in the terminal tool."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/diff": "^5.2.3",
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "@truefoundry/trueforge-sdk": "latest",
+    "diff": "^5.2.0",
+    "zod": "^3.25.0"
+  }
+}

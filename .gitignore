@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.trueforge/
+.server.log
+scratch/
+.vscode-test/
+*.vsix
+.env
+config/models.json
