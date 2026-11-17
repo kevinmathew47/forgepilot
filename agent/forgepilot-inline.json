@@ -1,0 +1,18 @@
+{
+  "name": "forgepilot-inline",
+  "description": "ForgePilot inline edit: rewrites a selected code region from a plain-language instruction.",
+  "manifest": {
+    "model": {
+      "name": "${MODEL}",
+      "params": { "temperature": 0, "max_tokens": 4096 }
+    },
+    "instructions": "You rewrite one selected region of a source file according to the user's instruction.\nReply with exactly one fenced code block that contains the complete replacement for the selected region and nothing else: no explanation before or after it.\nThe block replaces the selection verbatim, so keep the original indentation, keep every line that should stay, and do not include code from outside the selection.\nOnly use names that exist in the provided context or in the language's standard library.\nPreserve the existing code style, quoting and docstring format.",
+    "config": {
+      "sandbox": { "enabled": false },
+      "generative_ui": { "enabled": false },
+      "ask_user_questions": { "enabled": false },
+      "dynamic_sub_agents": { "enabled": false },
+      "iteration_limit": 3
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "providers": [
+    {
+      "type": "google-gemini",
+      "apiKeyEnv": "GEMINI_API_KEY",
+      "models": [
+        {
+          "model_id": "gemini-3.5-flash",
+          "name": "gemini-3-5-flash",
+          "properties": {
+            "context_length": 1048576,
+            "max_output_tokens": 65536
+          }
+        },
+        {
+          "model_id": "gemini-2.5-flash",
+          "name": "gemini-2-5-flash",
+          "properties": {
+            "context_length": 1048576,
+            "max_output_tokens": 65536
+          }
+        },
+        {
+          "model_id": "gemini-3.5-flash-lite",
+          "name": "gemini-3-5-flash-lite",
+          "properties": {
+            "context_length": 1048576,
+            "max_output_tokens": 65536
+          }
+        }
+      ]
+    },
+    {
+      "type": "custom",
+      "name": "ollama",
+      "base_url": "http://localhost:11434/v1",
+      "apiKeyEnv": "OLLAMA_API_KEY",
+      "models": [
+        {
+          "model_id": "qwen2.5:7b",
+          "name": "qwen2-5-7b",
+          "properties": {
+            "context_length": 32768,
+            "max_output_tokens": 8192
+          }
+        }
+      ]
+    }
+  ],
+  "order": [
+    "google-gemini/gemini-3-5-flash-lite",
+    "google-gemini/gemini-3-5-flash",
+    "ollama/qwen2-5-7b"
+  ]
+}
