@@ -13,7 +13,7 @@ Describe what you want in plain English. ForgePilot finds the right files, write
 
 [What it does](#-what-it-does) · [How it works](#-how-it-works-in-plain-words) · [Install](#-install-in-6-steps) · [Use it](#-how-to-use-it) · [Troubleshooting](#-troubleshooting) · [For developers](#-for-developers)
 
-**Demo video:** _link added after recording_ · **Write-up:** [docs/WRITEUP.md](docs/WRITEUP.md)
+**Demo video:** _coming soon_
 
 </div>
 
@@ -321,26 +321,26 @@ FP_SCENARIO=cancel node test/run.js
 
 On Windows, if the path contains spaces, run it from a junction without spaces and set `FP_EXT` and `FP_WORKSPACE`.
 
-Results on pallets/flask 3.1.3 (22d92470):
+Results on [pallets/flask](https://github.com/pallets/flask) 3.1.3 (22d92470), a ~17k-line codebase:
 
 | Scenario | Result |
 |---|---|
-| Task A, inline edit | Diff streamed in ~5 s; 2 hunks accepted one by one; `FLASK_DEBUG=off`, `OFF`, `n`, `no`, `false` and `0` all give `False`; undo restored a clean `git status` |
-| Task B, agent mode | The agent found and edited `src/flask/cli.py`, `tests/test_cli.py` and `docs/cli.rst` unprompted, over 4 review rounds; `pytest tests/test_cli.py` gives 59 passed; `flask --help` lists `config`; secrets print as `"***"` ([diff](docs/taskB-result.diff)) |
-| Task C, invalid key then fallback | 401 from the invalid key, automatic switch to the next model, correct edit, `git status` clean throughout |
-| Task C, invalid key only | Clear error in ~1 s, editor responsive, `git status` clean |
+| Inline edit: extend `get_debug_flag` | Diff streamed in ~5 s; 2 hunks accepted one by one; `FLASK_DEBUG=off`, `OFF`, `n`, `no`, `false` and `0` all give `False`; undo restored a clean `git status` |
+| Agent mode: add a `flask config` command, with test and docs, without naming files | The agent found and edited `src/flask/cli.py`, `tests/test_cli.py` and `docs/cli.rst` unprompted, over 4 review rounds; `pytest tests/test_cli.py` gives 59 passed; `flask --help` lists `config`; secrets print as `"***"` ([diff](docs/agent-mode-result.diff)) |
+| Resilience: invalid API key, then fallback | 401 from the invalid key, automatic switch to the next model, correct edit, `git status` clean throughout |
+| Resilience: invalid API key only | Clear error in ~1 s, editor responsive, `git status` clean |
 | Cancel mid-stream | Stopped in ~130 ms, review closed, `git status` clean |
 
-`examples/demoapp/app.py` is a small Flask app with secret-looking config keys, used to show `flask config` masking. The recording plan is in [docs/VIDEO_SCRIPT.md](docs/VIDEO_SCRIPT.md).
+`examples/demoapp/app.py` is a small Flask app with secret-looking config keys, used to show `flask config` masking.
 </details>
 
 ---
 
-## 🏆 Techfest IIT Bombay · TrueFoundry Forge-a-thon
+## 📌 Project facts
 
-- **Starting point:** written from scratch; not a fork of Cline, Continue, Roo Code or opencode.
-- **Agent loop:** TrueForge local mode (`npx @truefoundry/trueforge@latest`); editor capabilities exposed as MCP tools.
-- **Models used:** Gemini 3.5 Flash-Lite and 3.5 Flash (Google AI Studio free tier) and Qwen2.5 7B via local Ollama, all $0. Details in [docs/WRITEUP.md](docs/WRITEUP.md).
+- **Written from scratch.** Not a fork of Cline, Continue, Roo Code or opencode.
+- **Agent loop:** TrueForge in local mode (`npx @truefoundry/trueforge@latest`), with editor capabilities exposed as MCP tools.
+- **Models it was tested with:** Gemini 3.5 Flash-Lite and 3.5 Flash (Google AI Studio free tier) and Qwen2.5 7B via local Ollama. Any model you configure in TrueForge works.
 
 ## 🙏 Credits
 

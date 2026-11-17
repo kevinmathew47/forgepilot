@@ -7,3 +7,5 @@ scratch/
 *.vsix
 .env
 config/models.json
+docs/WRITEUP.md
+docs/VIDEO_SCRIPT.md
