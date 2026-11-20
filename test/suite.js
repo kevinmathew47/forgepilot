@@ -37,6 +37,22 @@ async function setModels(models) {
   await sleep(500);
 }
 
+const VIDEO = process.env.FP_VIDEO === "1";
+
+async function showVerify(title, commands, holdMs) {
+  if (!VIDEO) return;
+  await vscode.commands.executeCommand("notifications.clearAll");
+  const term = vscode.window.createTerminal({ name: title, cwd: require("fs").realpathSync.native(root()) });
+  term.show(false);
+  await vscode.commands.executeCommand("workbench.action.terminal.focus");
+  await sleep(7000);
+  for (const c of commands) {
+    term.sendText(c, true);
+    await sleep(2500);
+  }
+  await sleep(holdMs);
+}
+
 async function taskA(models, expectApply) {
   await setModels(models);
   const { start, end } = await openHelpers();
@@ -59,6 +75,11 @@ async function taskA(models, expectApply) {
   log("streamed:", sawStreaming, "hunks:", s.review.files[0].hunks.length, "after", (Date.now() - t0) / 1000, "s");
   for (const h of s.review.files[0].hunks) log("hunk", h.id, h.state, "\n" + h.preview);
   log("git during review (must be clean):", JSON.stringify(git()));
+  if (VIDEO) {
+    await vscode.commands.executeCommand("notifications.clearAll");
+    try { await vscode.commands.executeCommand("workbench.action.compareEditor.nextChange"); } catch {}
+    await sleep(6000);
+  }
   await vscode.commands.executeCommand("forgepilot.acceptAll");
   await run;
   const after = await state();
@@ -69,9 +90,14 @@ async function taskA(models, expectApply) {
     log(`FLASK_DEBUG=${v} ->`, out);
   }
   log(execSync("git diff", { cwd: root() }).toString());
+  await showVerify("Task A check", [
+    "foreach ($v in 'off','OFF','n','no','false','0','1','on') { $env:FLASK_DEBUG=$v; Write-Host \"FLASK_DEBUG=$v ->\" (.venv\\Scripts\\python -c 'from flask.helpers import get_debug_flag; print(get_debug_flag())') }",
+    "git status --short",
+  ], 5000);
   await vscode.commands.executeCommand("forgepilot.undoLast");
   await sleep(800);
   log("git after undo (must be clean):", JSON.stringify(git()));
+  await showVerify("After undo", ["git status; Write-Host 'clean after undo'"], 4000);
 }
 
 async function cancelTest(models) {
@@ -86,6 +112,7 @@ async function cancelTest(models) {
   await run;
   const s = await state();
   log("cancel took", Date.now() - t0, "ms; reviewActive", s.reviewActive, "running", s.running, "git:", JSON.stringify(git()));
+  await showVerify("After cancel", ["git status; Write-Host 'cancelled: nothing changed'"], 4000);
 }
 
 const TASK_B = `Add a new built-in CLI command flask config that prints the loaded application's configuration as JSON, masking the values of any key containing SECRET, PASSWORD, TOKEN or KEY as "***". It must appear in flask --help, be covered by a test, and be documented alongside the other built-in commands.`;
@@ -102,6 +129,11 @@ async function taskB(models) {
       reviews++;
       log("review", reviews, s.review.files.map((f) => `${f.path} (+${f.added} -${f.removed}, ${f.hunks.length} hunks)`).join("; "));
       log("git during review (must be clean):", JSON.stringify(git()));
+      if (VIDEO) {
+        await vscode.commands.executeCommand("notifications.clearAll");
+        try { await vscode.commands.executeCommand("workbench.action.compareEditor.nextChange"); } catch {}
+        await sleep(7000);
+      }
       await vscode.commands.executeCommand("forgepilot.acceptAll");
     }
     await sleep(1000);
@@ -115,6 +147,12 @@ async function taskB(models) {
   } catch (e) {
     log("pytest failed", String(e.stdout).slice(-1500));
   }
+  await showVerify("Task B check", [
+    "git diff --stat",
+    ".venv\\Scripts\\python -m pytest tests/test_cli.py -q",
+    ".venv\\Scripts\\flask --help",
+    "Push-Location D:\\fp-ext\\examples\\demoapp; D:\\fp-flask-clean\\.venv\\Scripts\\flask --app app config; Pop-Location",
+  ], 9000);
 }
 
 async function run() {
@@ -127,6 +165,12 @@ async function run() {
   if (scenario === "taskC") await taskA(models, models.length > 1);
   if (scenario === "cancel") await cancelTest(models);
   if (scenario === "taskB") await taskB(models);
+  if (scenario === "verifyB") await showVerify("Task B check", [
+    "git diff --stat",
+    ".venv\\Scripts\\python -m pytest tests/test_cli.py -q",
+    ".venv\\Scripts\\flask --help",
+    "Push-Location D:\\fp-ext\\examples\\demoapp; D:\\fp-flask-clean\\.venv\\Scripts\\flask --app app config; Pop-Location",
+  ], 12000);
 }
 
 module.exports = { run };

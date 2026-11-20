@@ -86,7 +86,7 @@ export class Forge {
     const existing: any[] = [];
     for await (const a of await this.client.agents.list()) existing.push(a);
     const found = existing.find((a) => a.name === name);
-    if (found) await this.client.agents.update(found.id, { name, description, manifest } as any);
+    if (found) await this.client.agents.update(found.id, { description, manifest } as any);
     else await this.client.agents.create({ name, description, manifest } as any);
   }
 

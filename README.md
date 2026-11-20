@@ -369,7 +369,7 @@ Results on [pallets/flask](https://github.com/pallets/flask) 3.1.3 (22d92470), a
 
 - **Written from scratch.** Not a fork of Cline, Continue, Roo Code or opencode.
 - **Agent loop:** TrueForge in local mode (`npx @truefoundry/trueforge@latest`), with editor capabilities exposed as MCP tools.
-- **Models it was tested with:** Gemini 3.5 Flash-Lite and 3.5 Flash (Google AI Studio free tier) and Qwen2.5 7B via local Ollama. Any model you configure in TrueForge works.
+- **Models it was tested with:** Qwen 3.8 Flash via OpenRouter (Task B: 61 tests passed in one review round), Gemini 3.5 Flash-Lite and 3.5 Flash (Google AI Studio free tier), and Qwen2.5 7B via local Ollama. Any model you configure in TrueForge works.
 
 ## 👥 Team
 
