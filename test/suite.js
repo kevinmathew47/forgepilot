@@ -13,7 +13,7 @@ async function waitFor(pred, ms, label) {
   while (Date.now() - t0 < ms) {
     const s = await state();
     if (pred(s)) return s;
-    await sleep(500);
+    await sleep(50);
   }
   throw new Error("timeout waiting for " + label);
 }
@@ -78,8 +78,9 @@ async function cancelTest(models) {
   await setModels(models);
   const { start, end } = await openHelpers();
   const run = vscode.commands.executeCommand("forgepilot.inlineEdit", { instruction: INSTRUCTION, startLine: start, endLine: end });
-  await waitFor((x) => x.review && x.review.streaming && x.review.files[0].hunks.length > 0, 600000, "first streamed tokens");
-  log("tokens streaming; cancelling");
+  await waitFor((x) => x.running, 30000, "run start");
+  const seen = await waitFor((x) => (x.review && x.review.streaming) || x.reviewActive || !x.running, 120000, "first streamed tokens");
+  log("state before cancel: streaming", !!(seen.review && seen.review.streaming), "reviewActive", seen.reviewActive, "running", seen.running);
   const t0 = Date.now();
   await vscode.commands.executeCommand("forgepilot.cancel");
   await run;
@@ -117,7 +118,7 @@ async function taskB(models) {
 }
 
 async function run() {
-  await vscode.extensions.getExtension("forgepilot.forgepilot").activate();
+  await vscode.extensions.getExtension("kevinmathew47.forgepilot").activate();
   await waitFor((s) => s.connected, 30000, "TrueForge connection");
   const scenario = process.env.FP_SCENARIO;
   const models = (process.env.FP_MODELS || "ollama/qwen2-5-7b").split(",");

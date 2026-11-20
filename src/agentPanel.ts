@@ -195,7 +195,7 @@ export class AgentPanel implements vscode.WebviewViewProvider {
     }
     await this.svc.engine.ensure();
     try {
-      await this.svc.forge.registerMcpServer(MCP_SERVER_NAME, this.svc.mcp.url);
+      await this.svc.forge.registerMcpServer(MCP_SERVER_NAME, this.svc.mcp.url, this.svc.mcp.token);
     } catch (e) {
       this.post({ type: "notice", level: "error", text: `Could not register the editor tools with TrueForge at ${this.svc.forge.baseUrl}: ${(e as Error).message}\nIs TrueForge running? Start it with scripts/start-trueforge, then try again.` });
       return;

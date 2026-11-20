@@ -70,23 +70,24 @@ export class Forge {
     return res.data.map((m) => m.name);
   }
 
-  async registerMcpServer(name: string, url: string) {
+  async registerMcpServer(name: string, url: string, token: string) {
     await this.client.settings.mcpServers.createOrUpdate({
       manifest: {
         type: "remote",
         name,
         url,
+        auth: { type: "header", headers: { Authorization: `Bearer ${token}` } },
         description: "VS Code editor tools from the ForgePilot extension: code retrieval, file reading and search, staged edits with hunk review, and terminal commands.",
       },
     } as any);
   }
 
-  async upsertAgent(name: string, manifest: Record<string, any>) {
+  async upsertAgent(name: string, manifest: Record<string, any>, description: string) {
     const existing: any[] = [];
     for await (const a of await this.client.agents.list()) existing.push(a);
     const found = existing.find((a) => a.name === name);
-    if (found) await this.client.agents.update(found.id, { manifest } as any);
-    else await this.client.agents.create({ name, manifest } as any);
+    if (found) await this.client.agents.update(found.id, { name, description, manifest } as any);
+    else await this.client.agents.create({ name, description, manifest } as any);
   }
 
   sessionUrl(sessionId: string): string {

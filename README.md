@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🔨 ForgePilot
+<img src="media/logo/forgepilot-icon.png" width="112" alt="ForgePilot logo: an orange flame with a code chevron inside">
+
+# ForgePilot
 
 **An AI coding assistant inside VS Code that shows you every change before it happens.**
 
@@ -10,8 +12,9 @@ Describe what you want in plain English. ForgePilot finds the right files, write
 ![TrueForge](https://img.shields.io/badge/runs%20on-TrueForge-6f42c1)
 ![Any model](https://img.shields.io/badge/models-Gemini%20%7C%20OpenAI%20%7C%20Claude%20%7C%20Ollama-2ea043)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+![Unit tests](https://img.shields.io/badge/unit%20tests-35%20passing-2ea043)
 
-[What it does](#-what-it-does) · [How it works](#-how-it-works-in-plain-words) · [Install](#-install-in-6-steps) · [Use it](#-how-to-use-it) · [Troubleshooting](#-troubleshooting) · [For developers](#-for-developers)
+[What it does](#-what-it-does) · [How it works](#-how-it-works-in-plain-words) · [Install](#-install-in-6-steps) · [Use it](#-how-to-use-it) · [Troubleshooting](#-troubleshooting) · [For developers](#-for-developers) · [Team](#-team)
 
 **Demo video:** _coming soon_
 
@@ -151,13 +154,27 @@ Open http://localhost:8790 → **Settings → Models** → choose a provider (Op
 Local models are free and private, but slower and weaker on big multi-file tasks. They work well as a **backup** model.
 </details>
 
-### Step 5 · Launch ForgePilot in VS Code
+### Step 5 · Install ForgePilot in VS Code
+
+**Option A: install it like any other extension (recommended).**
+
+1. Download `forgepilot-0.1.0.vsix` from the [Releases page](https://github.com/kevinmathew47/forgepilot/releases), or build it yourself with `npm run package`.
+2. In VS Code: `Ctrl+Shift+P` → **Extensions: Install from VSIX…** → pick the file.
+3. **File → Open Folder…** and open the project you want to work on.
+
+Or from a terminal:
+
+```bash
+code --install-extension forgepilot-0.1.0.vsix
+```
+
+**Option B: run from source (for contributors).**
 
 1. Open the `forgepilot` folder in VS Code.
 2. Press **F5**. A second VS Code window opens, titled *Extension Development Host*.
 3. In that new window, **File → Open Folder…** and open the project you want to work on.
 
-✅ **Success:** the bottom-right status bar shows something like `🔌 TrueForge · gemini-3-5-flash-lite → qwen2-5-7b`, and a 🔨 ForgePilot icon appears in the left sidebar.
+✅ **Success:** the bottom-right status bar shows something like `🔌 TrueForge · gemini-3-5-flash-lite → qwen2-5-7b`, and the ForgePilot flame icon appears in the left sidebar.
 
 ### Step 6 · Pick your models (optional)
 
@@ -177,7 +194,7 @@ Press `Ctrl+Shift+P` → **ForgePilot: Select Models** → choose the **main** m
 
 ### 🤖 Agent mode: bigger, multi-file changes
 
-1. Click the **🔨 ForgePilot** icon in the left sidebar.
+1. Click the **ForgePilot** flame icon in the left sidebar.
 2. Type a request, for example *"Add a `flask config` command that prints the config as JSON with secrets hidden. Add a test and document it."*
 3. Watch it work:
    - a **Context** card lists the files it chose, why, and how much of its reading budget it used;
@@ -207,6 +224,7 @@ Press `Ctrl+Shift+P` → **ForgePilot: Select Models** → choose the **main** m
 - ✅ **Every approved change can be undone** in one step.
 - ✅ The agent may only run safe commands (tests, `python`, `git status` …) on its own. Anything else asks you first.
 - ✅ Your API keys stay in TrueForge on your machine. ForgePilot never sees or sends them.
+- ✅ ForgePilot's local tool server only answers on your own machine, and only to requests carrying a secret token that changes every time VS Code starts. Other programs on your PC can't use it.
 
 ---
 
@@ -232,18 +250,20 @@ Press `Ctrl+Shift+P` → **ForgePilot: Select Models** → choose the **main** m
 ```
 VS Code extension (TypeScript)
  ├─ TrueForge client (@truefoundry/trueforge-sdk): sessions, turn streams, approvals, cancel
- ├─ Editor MCP server (streamable HTTP on 127.0.0.1:8791/mcp), registered in TrueForge as "forgepilot-editor"
+ ├─ Editor MCP server (streamable HTTP on 127.0.0.1:8791/mcp, bearer token + loopback host check),
+ │    registered in TrueForge as "forgepilot-editor" with header auth
  │    find_relevant_code · repo_map · list_files · read_file · search_code · find_symbol
  │    edit_file · write_file · show_staged_changes · discard_staged · submit_changes · run_command
  ├─ Changeset: staged edits held in memory, never on disk until reviewed
  ├─ Review controller: virtual-document diff editors, per-hunk CodeLens, panel review card
- ├─ Context engine: symbol index, BM25, import graph, token budget
+ ├─ Context engine: symbol index, BM25, import graph, git co-change history, token budget
  └─ Webview panel: streamed transcript, context card, subagent threads, review, undo
 ```
 
 - The extension **never calls a model provider**. Every model call goes through TrueForge, and the agent (not the extension) decides what to read and change, through the MCP tools.
 - `submit_changes` is in `require_approval_for_tools`. TrueForge's `tool.approval_required` pause opens the hunk review; accepting sends `user.tool_approval: allow` and the MCP call writes the accepted hunks as one `WorkspaceEdit`.
-- Harness features used: tool approval, dynamic subagents, deferred tool loading (eight core tools preloaded, the rest deferred), and context compaction.
+- Harness features used: tool approval, dynamic subagents, deferred tool loading (eight core tools preloaded, the rest deferred), context compaction, and MCP header auth.
+- The MCP server creates a fresh 256-bit token at start-up and registers it with TrueForge as an `Authorization: Bearer` header. Requests without it, or with a non-loopback `Host` header, get `401`.
 </details>
 
 <details>
@@ -255,6 +275,7 @@ VS Code extension (TypeScript)
    - BM25 ranking with identifier-aware tokens and a small synonym map;
    - exact identifiers named in the task pull in their defining file first;
    - import-graph neighbours are boosted, and *test* and *docs* intents add test counterparts and documentation pages;
+   - **git co-change history:** files that were changed in the same commits as the best match get a boost (from the last 600 commits, normalised so that files touched by almost every commit, such as changelogs, don't dominate). The reason shows as "changed together with `src/flask/cli.py` in 12 commits";
    - greedy packing into the budget, with the files left out listed.
 3. **Inline edit:** imports, lines around the selection, and definitions of identifiers it uses (3,000-token budget).
 
@@ -310,7 +331,15 @@ Nothing needs importing by hand. On connect, the extension:
 <details>
 <summary><b>Automated tests and results</b></summary>
 
-`test/` drives the real extension in a separate VS Code profile, against a live TrueForge:
+**Unit tests** (no model or network needed, Node 20+, any OS):
+
+```bash
+npm run test:unit
+```
+
+35 tests cover hunk splitting and partial accept, CRLF handling, the edit matcher (exact, whitespace-tolerant, ambiguous and missing cases), the fallback policy (bad key, daily quota, per-minute retry hint, all models failing, cancel), MCP token and host checks against a live server, retrieval on a fixture repository, and git co-change parsing.
+
+**End-to-end tests:** `test/` drives the real extension in a separate VS Code profile, against a live TrueForge:
 
 ```bash
 FP_SCENARIO=taskA FP_MODELS=google-gemini/gemini-3-5-flash-lite node test/run.js
@@ -341,6 +370,18 @@ Results on [pallets/flask](https://github.com/pallets/flask) 3.1.3 (22d92470), a
 - **Written from scratch.** Not a fork of Cline, Continue, Roo Code or opencode.
 - **Agent loop:** TrueForge in local mode (`npx @truefoundry/trueforge@latest`), with editor capabilities exposed as MCP tools.
 - **Models it was tested with:** Gemini 3.5 Flash-Lite and 3.5 Flash (Google AI Studio free tier) and Qwen2.5 7B via local Ollama. Any model you configure in TrueForge works.
+
+## 👥 Team
+
+ForgePilot is built and maintained by **Team Hooligans**:
+
+| | Member |
+|---|---|
+| 🧭 | **John Titus**, team lead |
+| 🛠️ | **Kevin Mathew** |
+| 🛠️ | **Edwin Aby** |
+
+Ideas, issues and pull requests are welcome.
 
 ## 🙏 Credits
 

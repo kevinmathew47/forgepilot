@@ -225,6 +225,46 @@ function chunkFile(info: FileInfo): Chunk[] {
   return chunks;
 }
 
+export interface CoChange {
+  commits: Map<string, number>;
+  pairs: Map<string, Map<string, number>>;
+  total: number;
+}
+
+export function parseCoChange(log: string, maxFilesPerCommit = 25): CoChange {
+  const commits = new Map<string, number>();
+  const pairs = new Map<string, Map<string, number>>();
+  let total = 0;
+  for (const block of log.split("\x00")) {
+    const files = [...new Set(block.split(/\r?\n/).map((l) => l.trim()).filter(Boolean))];
+    if (files.length < 1 || files.length > maxFilesPerCommit) continue;
+    total++;
+    for (const f of files) {
+      commits.set(f, (commits.get(f) ?? 0) + 1);
+      const row = pairs.get(f) ?? new Map<string, number>();
+      for (const g of files) if (g !== f) row.set(g, (row.get(g) ?? 0) + 1);
+      pairs.set(f, row);
+    }
+  }
+  return { commits, pairs, total };
+}
+
+export function coChangePartners(
+  data: CoChange,
+  file: string,
+  minShared = 2,
+  limit = 8,
+  hubShare = 0.2,
+): { path: string; shared: number; ratio: number; strength: number }[] {
+  const own = data.commits.get(file) ?? 0;
+  if (!own) return [];
+  return [...(data.pairs.get(file) ?? new Map<string, number>()).entries()]
+    .filter(([p, n]) => n >= minShared && (data.commits.get(p) ?? 0) <= Math.max(minShared, data.total * hubShare))
+    .map(([p, n]) => ({ path: p, shared: n, ratio: n / own, strength: n / Math.sqrt(own * (data.commits.get(p) ?? n)) }))
+    .sort((a, b) => b.strength - a.strength || b.shared - a.shared)
+    .slice(0, limit);
+}
+
 export class ContextEngine {
   private files = new Map<string, FileInfo>();
   private chunks: Chunk[] = [];
@@ -232,6 +272,7 @@ export class ContextEngine {
   private avgLen = 1;
   private importGraph = new Map<string, Set<string>>();
   private reverseGraph = new Map<string, Set<string>>();
+  private coChange: CoChange = { commits: new Map(), pairs: new Map(), total: 0 };
   private building?: Promise<void>;
   private dirty = true;
 
@@ -272,6 +313,17 @@ export class ContextEngine {
           if (err) return resolve(undefined);
           resolve(stdout.split(/\r?\n/).filter(Boolean));
         },
+      );
+    });
+  }
+
+  private gitCoChange(): Promise<CoChange> {
+    return new Promise((resolve) => {
+      execFile(
+        "git",
+        ["log", "-n", "600", "--no-merges", "--name-only", "--format=%x00"],
+        { cwd: this.root, maxBuffer: 64 * 1024 * 1024, windowsHide: true },
+        (err, stdout) => resolve(err ? { commits: new Map(), pairs: new Map(), total: 0 } : parseCoChange(stdout)),
       );
     });
   }
@@ -323,7 +375,8 @@ export class ContextEngine {
   }
 
   private async build() {
-    const list = await this.listFiles();
+    const [list, coChange] = await Promise.all([this.listFiles(), this.gitCoChange()]);
+    this.coChange = coChange;
     const files = new Map<string, FileInfo>();
     await Promise.all(
       list
@@ -605,6 +658,27 @@ export class ContextEngine {
           if (!cur.reasons.some((r) => r.startsWith("imported by"))) cur.reasons.push(`imported by ${src}`);
         }
       }
+    }
+
+    const coBoost = new Map<string, { boost: number; reason: string }>();
+    for (const [src, meta] of topSources) {
+      for (const partner of coChangePartners(this.coChange, src)) {
+        const info = this.files.get(partner.path);
+        if (!info || partner.strength < 0.15 || topSources.some(([s]) => s === partner.path)) continue;
+        const wanted = (info.kind === "test" && wantsTests) || (info.kind === "doc" && wantsDocs);
+        if (!candidates.has(partner.path) && !(wanted && partner.strength >= 0.3)) continue;
+        const boost = meta.score * 0.2 * Math.min(1, partner.strength * 2);
+        const prev = coBoost.get(partner.path);
+        if (!prev || prev.boost < boost) {
+          coBoost.set(partner.path, { boost, reason: `changed together with ${src} in ${partner.shared} commits` });
+        }
+      }
+    }
+    for (const [file, { boost, reason }] of coBoost) {
+      const entry = candidates.get(file) ?? { score: 0, reasons: [], role: this.files.get(file)!.kind };
+      entry.score += boost;
+      entry.reasons.push(reason);
+      candidates.set(file, entry);
     }
 
     if (wantsTests) {

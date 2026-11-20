@@ -195,7 +195,7 @@ export class AgentToolHost implements ToolHost {
       const choice = await vscode.window.showWarningMessage(`The agent wants to run:\n${trimmed}`, { modal: true }, "Run once");
       if (choice !== "Run once") return `The user declined to run: ${trimmed}`;
     }
-    const root = workspaceRoot();
+    const root = canonicalDir(workspaceRoot());
     const env = { ...process.env };
     for (const venv of [".venv", "venv", "env"]) {
       const bin = path.join(root, venv, process.platform === "win32" ? "Scripts" : "bin");
@@ -265,4 +265,14 @@ export function resolveForMention(engine: ContextEngine, token: string): string 
   if (engine.hasFile(rel)) return rel;
   const matches = engine.allPaths().filter((p) => p.endsWith("/" + rel) || path.posix.basename(p) === rel);
   return matches.length === 1 ? matches[0] : undefined;
+}
+
+export function canonicalDir(dir: string): string {
+  let out = dir;
+  try {
+    out = fs.realpathSync.native(dir);
+  } catch {
+    out = dir;
+  }
+  return /^[a-z]:/.test(out) ? out[0].toUpperCase() + out.slice(1) : out;
 }

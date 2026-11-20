@@ -10,7 +10,7 @@ async function main() {
     vscodeExecutablePath: exe,
     extensionDevelopmentPath: ext,
     extensionTestsPath: path.join(ext, "test", "suite.js"),
-    launchArgs: [workspace, "--disable-extensions", "--user-data-dir", path.join(os.tmpdir(), "forgepilot-test-profile")],
+    launchArgs: [workspace, "--disable-extensions", "--disable-workspace-trust", "--user-data-dir", path.join(os.tmpdir(), "forgepilot-test-profile")],
     extensionTestsEnv: { FP_SCENARIO: process.env.FP_SCENARIO || "taskA", FP_MODELS: process.env.FP_MODELS || "" },
   });
 }

@@ -1,15 +1,43 @@
 {
   "name": "forgepilot",
   "displayName": "ForgePilot",
-  "description": "An editor-native coding agent whose agent loop runs on TrueForge.",
+  "description": "An open-source AI coding agent for VS Code. Bring your own model through TrueForge: inline edits, multi-file agent mode, hunk-by-hunk review with undo, and automatic model fallback.",
   "version": "0.1.0",
-  "publisher": "forgepilot",
-  "author": "Kevin Mathew",
+  "publisher": "kevinmathew47",
+  "contributors": [
+    {
+      "name": "Kevin Mathew"
+    },
+    {
+      "name": "John Titus"
+    },
+    {
+      "name": "Edwin Aby"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/kevinmathew47/forgepilot.git"
   },
   "license": "MIT",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#16191E",
+    "theme": "dark"
+  },
+  "homepage": "https://github.com/kevinmathew47/forgepilot#readme",
+  "bugs": {
+    "url": "https://github.com/kevinmathew47/forgepilot/issues"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "coding assistant",
+    "trueforge",
+    "mcp",
+    "code review",
+    "refactor"
+  ],
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -206,7 +234,10 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
-    "package": "vsce package --no-dependencies"
+    "package": "vsce package --no-dependencies",
+    "test:unit": "node scripts/run-unit-tests.mjs",
+    "test:e2e": "node test/run.js",
+    "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
     "@types/diff": "^5.2.3",
@@ -218,8 +249,11 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
-    "@truefoundry/trueforge-sdk": "latest",
+    "@truefoundry/trueforge-sdk": "0.185.0",
     "diff": "^5.2.0",
     "zod": "^3.25.0"
+  },
+  "author": {
+    "name": "Kevin Mathew"
   }
 }

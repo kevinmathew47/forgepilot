@@ -1,4 +1,5 @@
 import * as http from "http";
+import { randomBytes, timingSafeEqual } from "crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
@@ -145,9 +146,23 @@ function buildServer(host: ToolHost): McpServer {
   return server;
 }
 
+export function isAuthorized(header: string | undefined, token: string): boolean {
+  if (!header || !token) return false;
+  const expected = Buffer.from(`Bearer ${token}`);
+  const given = Buffer.from(header);
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+export function isLocalHost(host: string | undefined): boolean {
+  if (!host) return false;
+  const name = host.replace(/:\d+$/, "").toLowerCase();
+  return name === "127.0.0.1" || name === "localhost" || name === "[::1]";
+}
+
 export class EditorMcpServer {
   private server?: http.Server;
   port = 0;
+  readonly token = randomBytes(32).toString("hex");
 
   constructor(private readonly host: ToolHost) {}
 
@@ -155,6 +170,12 @@ export class EditorMcpServer {
     this.server = http.createServer(async (req, res) => {
       if (!req.url?.startsWith("/mcp")) {
         res.writeHead(404).end();
+        return;
+      }
+      if (!isLocalHost(req.headers.host) || !isAuthorized(req.headers.authorization, this.token)) {
+        res.writeHead(401, { "content-type": "application/json", "www-authenticate": "Bearer" }).end(
+          JSON.stringify({ jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized." }, id: null }),
+        );
         return;
       }
       if (req.method !== "POST") {

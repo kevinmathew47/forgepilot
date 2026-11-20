@@ -56,7 +56,7 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
     try {
-      await svc.forge.registerMcpServer(MCP_SERVER_NAME, svc.mcp.url);
+      await svc.forge.registerMcpServer(MCP_SERVER_NAME, svc.mcp.url, svc.mcp.token);
       svc.log.appendLine(`Registered MCP server ${MCP_SERVER_NAME} -> ${svc.mcp.url} in TrueForge`);
     } catch (e) {
       svc.log.appendLine(`Could not register MCP server: ${(e as Error).message}`);
@@ -68,7 +68,7 @@ export async function activate(context: vscode.ExtensionContext) {
       for (const name of ["forgepilot-coder", "forgepilot-inline"] as const) {
         try {
           const def = svc.definition(name);
-          await svc.forge.upsertAgent(def.name, svc.spec(name, primary));
+          await svc.forge.upsertAgent(def.name, svc.spec(name, primary), def.description);
         } catch (e) {
           svc.log.appendLine(`Could not save agent ${name}: ${(e as Error).message}`);
         }
@@ -151,7 +151,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.onDidChangeWindowState(async (w) => {
       if (!w.focused || !svc.connected || !svc.mcp.port) return;
       try {
-        await svc.forge.registerMcpServer(MCP_SERVER_NAME, svc.mcp.url);
+        await svc.forge.registerMcpServer(MCP_SERVER_NAME, svc.mcp.url, svc.mcp.token);
       } catch {
         return;
       }
